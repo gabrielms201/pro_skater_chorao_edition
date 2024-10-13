@@ -39,6 +39,10 @@ combo_streak = 0  # Tracks correct hits in a row
 background_image = pygame.image.load("background.jpeg")  # Ensure the image exists in your project folder
 background_image = pygame.transform.scale(background_image, (WIDTH, HEIGHT))  # Scale it to the screen size
 
+# Load and configure background music
+pygame.mixer.music.load("musica.mp3")  # Replace with the path to your music file
+pygame.mixer.music.set_volume(0.5)  # Set the volume (0.0 to 1.0)
+
 # Function to find the next note in the lane
 def find_next_note_in_lane(lane_key, notes):
     """Finds the next note in the same lane that hasn't been hit yet."""
@@ -147,15 +151,19 @@ class Game:
         score = 0
         combo = 0
         combo_streak = 0
+        pygame.mixer.music.play(-1)  # Start playing music in loop when the game starts
 
     def pause_game(self):
         self.paused = True
+        pygame.mixer.music.pause()  # Pause the music when game is paused
 
     def resume_game(self):
         self.paused = False
+        pygame.mixer.music.unpause()  # Unpause the music when game resumes
 
     def back_to_menu(self):
         self.state = "menu"
+        pygame.mixer.music.stop()  # Stop the music when returning to the menu
 
     def handle_menu(self):
         # Draw the menu
@@ -198,7 +206,6 @@ class Game:
                     self.notes.remove(note)  # Remove the note once it has fully dissipated
             else:
                 note.fall()
-
             note.draw(screen)
 
         # Penalize if the note passes the striking zone without being hit
