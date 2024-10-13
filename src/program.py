@@ -1,7 +1,7 @@
 import pygame
 from pygame.locals import *
-
 import random
+import os
 
 # Initialize Pygame
 pygame.init()
@@ -35,17 +35,17 @@ score = 0
 combo = 0
 combo_streak = 0  # Tracks correct hits in a row
 
-# Load background image
-background_image = pygame.image.load("background.jpeg")  # Ensure the image exists in your project folder
-background_image = pygame.transform.scale(background_image, (WIDTH, HEIGHT))  # Scale it to the screen size
+# Music list and high scores dictionary
+songs = ["musica1.mp3", "musica2.mp3", "musica3.mp3"]
+high_scores = {song: 0 for song in songs}
+current_song = songs[0]
 
-# Load and configure background music
-pygame.mixer.music.load("musica.mp3")  # Replace with the path to your music file
-pygame.mixer.music.set_volume(0.5)  # Set the volume (0.0 to 1.0)
+# Load background image
+background_image = pygame.image.load("background.jpeg")
+background_image = pygame.transform.scale(background_image, (WIDTH, HEIGHT))
 
 # Function to find the next note in the lane
 def find_next_note_in_lane(lane_key, notes):
-    """Finds the next note in the same lane that hasn't been hit yet."""
     for note in notes:
         if note.key == lane_key and not note.hit:
             return note
@@ -65,16 +65,16 @@ def calculate_score(note, accuracy):
 
     if accuracy == "early":
         score_increase = -25
-        note.dissipate_color = WHITE  # Early hit, set dissipation to white
+        note.dissipate_color = WHITE
     elif accuracy == "good":
         score_increase = 100
-        note.dissipate_color = GREEN  # Good hit, set dissipation to green
+        note.dissipate_color = GREEN
     elif accuracy == "half":
         score_increase = 50
-        note.dissipate_color = ORANGE  # Half hit, set dissipation to orange
+        note.dissipate_color = ORANGE
     else:
         score_increase = -25
-        note.dissipate_color = RED  # Miss, set dissipation to red
+        note.dissipate_color = RED
 
     if score_increase > 0:
         combo_streak += 1
@@ -88,130 +88,127 @@ def calculate_score(note, accuracy):
 
     score += score_increase * combo
 
-
-# Note class
 class Note:
     def __init__(self, lane, key):
         self.radius = 25  # Radius of the circle note
-        self.rect = pygame.Rect(lane, -50, self.radius * 2, self.radius * 2)  # Define bounding rect for the circle
+        self.rect = pygame.Rect(lane, -50, self.radius * 2, self.radius * 2)
         self.hit = False
         self.key = key
-        self.dissipating = False  # Flag to start dissipation
-        self.alpha = 255  # Full opacity at the start
-        self.size_decrease_rate = 2  # How fast the note shrinks
-        self.dissipate_color = RED  # Default color (will be changed based on hit)
+        self.dissipating = False
+        self.alpha = 255
+        self.size_decrease_rate = 2
+        self.dissipate_color = RED
 
     def fall(self):
         if not self.hit:
             self.rect.y += note_speed
 
     def dissipate(self):
-        """Handles the dissipating animation after the note is hit."""
         if self.dissipating:
-            # Increase size first, then shrink it for larger dissipation effect
             self.radius += self.size_decrease_rate
-            self.alpha = max(0, self.alpha - 15)  # Gradually reduce alpha (transparency)
-
-            if self.radius > 75:  # Start shrinking after a certain size
+            self.alpha = max(0, self.alpha - 15)
+            if self.radius > 75:
                 self.size_decrease_rate = -2
-
             if self.radius <= 0 or self.alpha <= 0:
-                return True  # Signal that dissipation is complete
+                return True
         return False
 
     def draw(self, screen):
-        """Draw the note, either normal or during dissipation."""
         if not self.dissipating:
             color = RED if not self.hit else self.dissipate_color
         else:
-            color = (*self.dissipate_color[:3], self.alpha)  # Adjust alpha (transparency) for dissipating
+            color = (*self.dissipate_color[:3], self.alpha)
 
-        # Create a surface with transparency for the dissipating effect
         note_surface = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
         pygame.draw.circle(note_surface, color, (self.radius, self.radius), self.radius)
-        screen.blit(note_surface, (self.rect.x, self.rect.y))
+        surface_x = self.rect.x + self.rect.width // 2 - self.radius
+        surface_y = self.rect.y + self.rect.height // 2 - self.radius
+        screen.blit(note_surface, (surface_x, surface_y))
 
-        # If hit, start dissipation
         if self.hit and not self.dissipating:
             self.dissipating = True
-
 
 # Game Class to Handle Menu, Play, and Pause
 class Game:
     def __init__(self):
-        self.state = "menu"  # Game starts in the menu
+        self.state = "menu"
         self.notes = []
         self.paused = False
-        self.selected_option = 0  # 0: Play, 1: Quit
+        self.selected_option = 0
+        self.song_selected = 0
 
     def start_game(self):
+        global current_song
+        current_song = songs[self.song_selected]
         self.state = "playing"
-        self.notes.clear()  # Clear notes when the game starts
+        self.notes.clear()
         global score, combo, combo_streak
         score = 0
         combo = 0
         combo_streak = 0
-        pygame.mixer.music.play(-1)  # Start playing music in loop when the game starts
+        pygame.mixer.music.load(current_song)
+        pygame.mixer.music.play(-1)
 
     def pause_game(self):
         self.paused = True
-        pygame.mixer.music.pause()  # Pause the music when game is paused
+        pygame.mixer.music.pause()
 
     def resume_game(self):
         self.paused = False
-        pygame.mixer.music.unpause()  # Unpause the music when game resumes
+        pygame.mixer.music.unpause()
 
     def back_to_menu(self):
         self.state = "menu"
-        pygame.mixer.music.stop()  # Stop the music when returning to the menu
+        pygame.mixer.music.stop()
 
     def handle_menu(self):
-        # Draw the menu
         screen.fill(BLACK)
-        title = font.render("Guitar Hero Clone", True, WHITE)
+        title = font.render("Skater Pro: Chorão", True, WHITE)
         play_text_color = YELLOW if self.selected_option == 0 else WHITE
         quit_text_color = YELLOW if self.selected_option == 1 else WHITE
         play_text = font.render("Play", True, play_text_color)
         quit_text = font.render("Quit", True, quit_text_color)
+        
+        # Display the songs and high scores
+        for i, song in enumerate(songs):
+            song_text_color = YELLOW if self.song_selected == i else WHITE
+            song_text = font.render(f"{song} (High Score: {high_scores[song]})", True, song_text_color)
+            screen.blit(song_text, (WIDTH // 2 - 200, HEIGHT // 2 + 100 + (i * 50)))
+
         screen.blit(title, (WIDTH // 2 - 200, HEIGHT // 4))
         screen.blit(play_text, (WIDTH // 2 - 50, HEIGHT // 2))
         screen.blit(quit_text, (WIDTH // 2 - 50, HEIGHT // 2 + 50))
 
     def handle_pause(self):
-        # Draw the pause screen
         screen.fill(BLACK)
         pause_text = font.render("Paused", True, WHITE)
         resume_text = font.render("Press ESC to Resume", True, WHITE)
+        return_text = font.render("Press M to Return to Menu", True, WHITE)
         screen.blit(pause_text, (WIDTH // 2 - 100, HEIGHT // 4))
         screen.blit(resume_text, (WIDTH // 2 - 200, HEIGHT // 2))
+        screen.blit(return_text, (WIDTH // 2 - 200, HEIGHT // 2 + 50))
 
     def handle_play(self):
-        # Draw the game background
         screen.blit(background_image, (0, 0))
-
-        # Create new notes at random intervals
         if random.randint(1, 50) == 1:
             lane = random.choice(lanes)
             key = lanes.index(lane)
             self.notes.append(Note(lane, key))
 
-        # Draw vertical lines in each lane
         for i, lane in enumerate(lanes):
-            pygame.draw.line(screen, WHITE, (lane + 25, 0), (lane + 25, HEIGHT), 2)  # Thin vertical line in center of lane
+            pygame.draw.line(screen, WHITE, (lane + 25, 0), (lane + 25, HEIGHT), 2)
 
-        # Process falling notes
         for note in self.notes[:]:
             if note.dissipating:
                 if note.dissipate():
-                    self.notes.remove(note)  # Remove the note once it has fully dissipated
+                    self.notes.remove(note)
             else:
                 note.fall()
             note.draw(screen)
 
-        # Penalize if the note passes the striking zone without being hit
         for note in self.notes[:]:
             if note.rect.y > striking_zone_y + 50 and not note.hit:
-                note.hit = True  # Mark the note as missed
+                note.hit = True
                 calculate_score(note, accuracy="miss")
 
     def update(self):
@@ -222,22 +219,34 @@ class Game:
                 self.handle_play()
             else:
                 self.handle_pause()
+        
+        # Display high score for the current song
+        if self.state == "playing" and not self.paused:
+            high_score_label = font.render(f"High Score: {high_scores[current_song]}", True, WHITE)
+            screen.blit(high_score_label, (10, 110))
 
     def handle_input(self, event):
         if self.state == "menu":
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:  # Select option
-                    if self.selected_option == 0:
+                    if self.selected_option == 0:  # Start Game
                         self.start_game()
-                    elif self.selected_option == 1:
+                    elif self.selected_option == 1:  # Quit Game
                         pygame.quit()
                         exit()
                 elif event.key == pygame.K_UP:
-                    # Move selection up
+                    # Move selection up (Play/Quit)
                     self.selected_option = (self.selected_option - 1) % 2
                 elif event.key == pygame.K_DOWN:
-                    # Move selection down
+                    # Move selection down (Play/Quit)
                     self.selected_option = (self.selected_option + 1) % 2
+                elif event.key == pygame.K_LEFT:
+                    # Move song selection left
+                    self.song_selected = (self.song_selected - 1) % len(songs)
+                elif event.key == pygame.K_RIGHT:
+                    # Move song selection right
+                    self.song_selected = (self.song_selected + 1) % len(songs)
+
         elif self.state == "playing":
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
@@ -248,24 +257,31 @@ class Game:
 
                 # Handle back to menu logic
                 if self.paused and event.key == pygame.K_m:
+                    if score > high_scores[current_song]:  # Save the high score if beaten
+                        high_scores[current_song] = score
                     self.back_to_menu()
 
-            # Process key presses when they occur
-            if not self.paused:
-                for lane_index, lane_key in enumerate(['a', 's', 'k', 'l']):
-                    if event.type == pygame.KEYDOWN and event.key == ord(lane_key):
-                        current_note = find_next_note_in_lane(lane_index, self.notes)
+                # Process key presses when they occur during gameplay
+                if not self.paused:
+                    for lane_index, lane_key in enumerate(['a', 's', 'k', 'l']):
+                        if event.key == ord(lane_key):
+                            current_note = find_next_note_in_lane(lane_index, self.notes)
 
-                        # Early hit logic: note is too far from the striking zone
-                        if current_note and current_note.rect.y < striking_zone_y - 50 and not current_note.hit:
-                            current_note.hit = True
-                            calculate_score(current_note, accuracy="early")
+                            # Early hit logic: note is too far from the striking zone
+                            if current_note and current_note.rect.y < striking_zone_y - 50 and not current_note.hit:
+                                current_note.hit = True
+                                calculate_score(current_note, accuracy="early")
 
-                        # Normal hit logic: note is in the striking zone
-                        elif current_note and HEIGHT - striking_zone_height - 50 < current_note.rect.y < HEIGHT - striking_zone_height + 50 and not current_note.hit:
-                            current_note.hit = True
-                            calculate_score(current_note, accuracy="good")
-
+                            # Normal hit logic: note is in the striking zone
+                            elif current_note and HEIGHT - striking_zone_height - 50 < current_note.rect.y < HEIGHT - striking_zone_height + 50 and not current_note.hit:
+                                current_note.hit = True
+                                calculate_score(current_note, accuracy="good")
+                                
+            # Save high score when the game ends
+            if event.type == pygame.QUIT or (self.paused and event.key == pygame.K_m):
+                if score > high_scores[current_song]:
+                    high_scores[current_song] = score  # Update the high score
+                self.back_to_menu()
 
 # Initialize game instance
 game = Game()
