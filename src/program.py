@@ -152,7 +152,7 @@ class BigCryer:
         self.animations = {
             "start_walk": self.load_animation("Sprites/Comeco_andar.png", 616, 192, 11),
             "walk": self.load_animation("Sprites/Andando.png", 616, 192, 12),
-            #"jump": self.load_animation("Sprites/Pulando.png", 616, 192, ???),
+            "jump": self.load_animation("Sprites/Pulando.png", 616, 192, 11),
             "crouch": self.load_animation("Sprites/Abaixa.png", 616, 192, 6),
             "trick1": self.load_animation("Sprites/Manobra_baixo.png", 616, 192, 8),
         }
@@ -368,7 +368,7 @@ while running:
             elif event.key == pygame.K_RIGHT:
                 cryer.set_animation("trick1")
             elif event.key == pygame.K_LEFT:
-                cryer.set_animation("walk")
+                cryer.set_animation("trick1")
 
         # Handle input in the game
         game.handle_input(event)
