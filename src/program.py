@@ -25,7 +25,7 @@ font = pygame.font.SysFont(None, 48)
 
 # Lanes and positions
 lanes = [150, 250, 350, 450]  # Corresponding to a, s, k, l
-keys = ['a', 's', 'k', 'l']
+keys = [0, 1, 2, 3]
 note_speed = 5
 striking_zone_height = 100  # Height of the striking zone
 striking_zone_y = HEIGHT - striking_zone_height
@@ -52,12 +52,17 @@ def find_next_note_in_lane(lane_key, notes):
     return None
 
 # Draw the fixed blocks
-def draw_fixed_blocks():
+def draw_fixed_arrows():
+    original_arrow = pygame.transform.scale(pygame.image.load("Sprites/seta_padrao.png"), (50, 50))
+    arrows = [ 
+        pygame.transform.rotate(original_arrow, 90),    # Left
+        pygame.transform.rotate(original_arrow, 180),   # Down
+        original_arrow,                                 # Up  
+        pygame.transform.rotate(original_arrow, -90)    # Right
+    ]
     for i, lane in enumerate(lanes):
-        block_rect = pygame.Rect(lane, striking_zone_y, 50, 50)
-        pygame.draw.rect(screen, GREY, block_rect)
-        key_label = font.render(keys[i], True, WHITE)
-        screen.blit(key_label, (lane + 10, striking_zone_y + 10))
+        arrow_rect = arrows[i].get_rect(center=(lane + 25, HEIGHT - striking_zone_height + 25))
+        screen.blit(arrows[i], arrow_rect)
 
 # Function to calculate the score and set dissipation color
 def calculate_score(note, accuracy):
@@ -99,6 +104,15 @@ class Note:
         self.size_decrease_rate = 2
         self.dissipate_color = RED
 
+        self.arrow_sprites = [
+            pygame.transform.scale(pygame.image.load("Sprites/seta_esquerda.png"), (50, 50)),
+            pygame.transform.scale(pygame.image.load("Sprites/seta_baixo.png"), (50, 50)),
+            pygame.transform.scale(pygame.image.load("Sprites/seta_cima.png"), (50, 50)),
+            pygame.transform.scale(pygame.image.load("Sprites/seta_direita.png"), (50, 50))
+        ]
+
+        self.current_arrow = self.arrow_sprites[key]
+
     def fall(self):
         if not self.hit:
             self.rect.y += note_speed
@@ -115,18 +129,66 @@ class Note:
 
     def draw(self, screen):
         if not self.dissipating:
-            color = RED if not self.hit else self.dissipate_color
+            if self.current_arrow:
+                screen.blit(self.current_arrow, (self.rect.x, self.rect.y))
         else:
-            color = (*self.dissipate_color[:3], self.alpha)
+            color = self.dissipate_color + (self.alpha,)
 
         note_surface = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
-        pygame.draw.circle(note_surface, color, (self.radius, self.radius), self.radius)
         surface_x = self.rect.x + self.rect.width // 2 - self.radius
         surface_y = self.rect.y + self.rect.height // 2 - self.radius
         screen.blit(note_surface, (surface_x, surface_y))
 
         if self.hit and not self.dissipating:
             self.dissipating = True
+
+
+class BigCryer:
+    def __init__(self):
+        self.x = 300
+        self.y = 490
+        self.hit = False
+        self.jump_height = 5
+        self.animations = {
+            "start_walk": self.load_animation("Sprites/Comeco_andar.png", 616, 192, 11),
+            "walk": self.load_animation("Sprites/Andando.png", 616, 192, 12),
+            #"jump": self.load_animation("Sprites/Pulando.png", 616, 192, ???),
+            "crouch": self.load_animation("Sprites/Abaixa.png", 616, 192, 6),
+            "trick1": self.load_animation("Sprites/Manobra_baixo.png", 616, 192, 8),
+        }
+        self.current_animation = "start_walk"
+        self.current_frame = 0
+        self.frame_counter = 0
+        self.frame_delay = 5
+
+    def load_animation(self, file_path, frame_width, frame_height, num_frames):
+        animation = []
+        sprite_sheet = pygame.image.load(file_path).convert_alpha()
+        for i in range(num_frames):
+            frame = sprite_sheet.subsurface((0, i*frame_height, frame_width, frame_height))
+            animation.append(frame)
+        return animation
+
+    def set_animation(self, action):
+        if action != self.current_animation:
+            self.current_animation = action
+            self.current_frame = 0
+
+    def update(self, screen):
+        self.frame_counter += 1
+        if self.frame_counter >= self.frame_delay:
+            self.frame_counter = 0
+            self.current_frame += 1
+            
+            # Se a animação for apenas uma vez e estiver no último quadro
+            if self.current_animation != "walk" and self.current_frame >= len(self.animations[self.current_animation]):
+                self.set_animation("walk")  # Volta para a animação "walk"
+            else:
+                # Garante que a animação continua a se repetir caso não seja "once"
+                self.current_frame %= len(self.animations[self.current_animation])
+        
+        current_frame_image = self.animations[self.current_animation][self.current_frame]
+        screen.blit(current_frame_image, (self.x, self.y))
 
 # Game Class to Handle Menu, Play, and Pause
 class Game:
@@ -286,6 +348,9 @@ class Game:
 # Initialize game instance
 game = Game()
 
+# Initialize Character BigCryer
+cryer = BigCryer()
+
 # Game loop
 clock = pygame.time.Clock()
 running = True
@@ -295,12 +360,24 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_DOWN:
+                cryer.set_animation("crouch")
+            elif event.key == pygame.K_UP:
+                cryer.set_animation("jump")
+            elif event.key == pygame.K_RIGHT:
+                cryer.set_animation("trick1")
+            elif event.key == pygame.K_LEFT:
+                cryer.set_animation("walk")
 
         # Handle input in the game
         game.handle_input(event)
 
     # Update the game based on state
     game.update()
+    if game.state == "playing":
+        cryer.update(screen)
+    
 
     # Draw the score and combo on the screen if the game is playing
     if game.state == "playing" and not game.paused:
@@ -308,7 +385,7 @@ while running:
         combo_label = font.render(f"Combo: {combo}", True, WHITE)
         screen.blit(score_label, (10, 10))
         screen.blit(combo_label, (10, 60))
-        draw_fixed_blocks()
+        draw_fixed_arrows()
 
     pygame.display.flip()
     clock.tick(60)
