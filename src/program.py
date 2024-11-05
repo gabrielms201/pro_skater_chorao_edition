@@ -100,13 +100,13 @@ class Note:
         self.size_decrease_rate = 2
         self.dissipate_color = RED
 
+        # Load arrow sprites for each lane
         self.arrow_sprites = [
             pygame.transform.scale(pygame.image.load("Sprites/setas/seta_esquerda.png"), (50, 50)),
             pygame.transform.scale(pygame.image.load("Sprites/setas/seta_baixo.png"), (50, 50)),
             pygame.transform.scale(pygame.image.load("Sprites/setas/seta_cima.png"), (50, 50)),
             pygame.transform.scale(pygame.image.load("Sprites/setas/seta_direita.png"), (50, 50))
         ]
-
         self.current_arrow = self.arrow_sprites[key]
 
     def fall(self):
@@ -117,23 +117,23 @@ class Note:
         if self.dissipating:
             self.radius += self.size_decrease_rate
             self.alpha = max(0, self.alpha - 15)
-            if self.radius > 75:
-                self.size_decrease_rate = -2
-            if self.radius <= 0 or self.alpha <= 0:
+            if self.alpha <= 0:
                 return True
         return False
 
     def draw(self, screen):
         if not self.dissipating:
-            if self.current_arrow:
-                screen.blit(self.current_arrow, (self.rect.x, self.rect.y))
+            # Draw the note with the arrow sprite
+            screen.blit(self.current_arrow, (self.rect.x, self.rect.y))
         else:
+            # Create a temporary surface for the dissipating note
+            dissipate_surface = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
             color = self.dissipate_color + (self.alpha,)
-
-        note_surface = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
-        surface_x = self.rect.x + self.rect.width // 2 - self.radius
-        surface_y = self.rect.y + self.rect.height // 2 - self.radius
-        screen.blit(note_surface, (surface_x, surface_y))
+            pygame.draw.circle(dissipate_surface, color, (self.radius, self.radius), self.radius)
+            # Position and draw the dissipating circle
+            dissipate_x = self.rect.x + self.rect.width // 2 - self.radius
+            dissipate_y = self.rect.y + self.rect.height // 2 - self.radius
+            screen.blit(dissipate_surface, (dissipate_x, dissipate_y))
 
         if self.hit and not self.dissipating:
             self.dissipating = True
@@ -353,8 +353,8 @@ class Game:
 
                 # Process key presses when they occur during gameplay
                 if not self.paused:
-                    for lane_index, lane_key in enumerate(['a', 's', 'k', 'l']):
-                        if event.key == ord(lane_key):
+                    for lane_index, lane_key in enumerate([pygame.K_LEFT, pygame.K_DOWN, pygame.K_UP, pygame.K_RIGHT]):
+                        if event.key == lane_key:
                             current_note = find_next_note_in_lane(lane_index, self.notes)
 
                             # Early hit logic: note is too far from the striking zone
