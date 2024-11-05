@@ -40,10 +40,6 @@ songs = ["musica1.mp3", "musica2.mp3", "musica3.mp3"]
 high_scores = {song: 0 for song in songs}
 current_song = songs[0]
 
-# Load background image
-background_image = pygame.image.load("background.jpeg")
-background_image = pygame.transform.scale(background_image, (WIDTH, HEIGHT))
-
 # Function to find the next note in the lane
 def find_next_note_in_lane(lane_key, notes):
     for note in notes:
@@ -53,7 +49,7 @@ def find_next_note_in_lane(lane_key, notes):
 
 # Draw the fixed blocks
 def draw_fixed_arrows():
-    original_arrow = pygame.transform.scale(pygame.image.load("Sprites/seta_padrao.png"), (50, 50))
+    original_arrow = pygame.transform.scale(pygame.image.load("Sprites/setas/seta_padrao.png"), (50, 50))
     arrows = [ 
         pygame.transform.rotate(original_arrow, 90),    # Left
         pygame.transform.rotate(original_arrow, 180),   # Down
@@ -105,10 +101,10 @@ class Note:
         self.dissipate_color = RED
 
         self.arrow_sprites = [
-            pygame.transform.scale(pygame.image.load("Sprites/seta_esquerda.png"), (50, 50)),
-            pygame.transform.scale(pygame.image.load("Sprites/seta_baixo.png"), (50, 50)),
-            pygame.transform.scale(pygame.image.load("Sprites/seta_cima.png"), (50, 50)),
-            pygame.transform.scale(pygame.image.load("Sprites/seta_direita.png"), (50, 50))
+            pygame.transform.scale(pygame.image.load("Sprites/setas/seta_esquerda.png"), (50, 50)),
+            pygame.transform.scale(pygame.image.load("Sprites/setas/seta_baixo.png"), (50, 50)),
+            pygame.transform.scale(pygame.image.load("Sprites/setas/seta_cima.png"), (50, 50)),
+            pygame.transform.scale(pygame.image.load("Sprites/setas/seta_direita.png"), (50, 50))
         ]
 
         self.current_arrow = self.arrow_sprites[key]
@@ -146,15 +142,15 @@ class Note:
 class BigCryer:
     def __init__(self):
         self.x = 300
-        self.y = 490
+        self.y = 400
         self.hit = False
         self.jump_height = 5
         self.animations = {
-            "start_walk": self.load_animation("Sprites/Comeco_andar.png", 616, 192, 11),
-            "walk": self.load_animation("Sprites/Andando.png", 616, 192, 12),
-            "jump": self.load_animation("Sprites/Pulando.png", 616, 192, 11),
-            "crouch": self.load_animation("Sprites/Abaixa.png", 616, 192, 6),
-            "trick1": self.load_animation("Sprites/Manobra_baixo.png", 616, 192, 8),
+            "start_walk": self.load_animation("Sprites/cryer/Comeco_andar.png", 616, 192, 11),
+            "walk": self.load_animation("Sprites/cryer/Andando.png", 616, 192, 12),
+            "jump": self.load_animation("Sprites/cryer/Pulando.png", 616, 192, 11),
+            "crouch": self.load_animation("Sprites/cryer/Abaixa.png", 616, 192, 6),
+            "trick1": self.load_animation("Sprites/cryer/Manobra_baixo.png", 616, 192, 8),
         }
         self.current_animation = "start_walk"
         self.current_frame = 0
@@ -166,6 +162,7 @@ class BigCryer:
         sprite_sheet = pygame.image.load(file_path).convert_alpha()
         for i in range(num_frames):
             frame = sprite_sheet.subsurface((0, i*frame_height, frame_width, frame_height))
+            frame = pygame.transform.scale(frame, (frame_width * 1.3, frame_height * 1.3))
             animation.append(frame)
         return animation
 
@@ -189,6 +186,27 @@ class BigCryer:
         
         current_frame_image = self.animations[self.current_animation][self.current_frame]
         screen.blit(current_frame_image, (self.x, self.y))
+
+class BackgroundLayer:
+    def __init__(self, image_path, speed):
+        self.image = pygame.image.load(image_path).convert_alpha()
+        self.image = pygame.transform.scale(self.image, (WIDTH, HEIGHT))
+        self.x1 = 0
+        self.x2 = self.image.get_width()
+        self.speed = speed
+
+    def update(self, screen):
+        self.x1 -= self.speed
+        self.x2 -= self.speed
+
+        if self.x1 + self.image.get_width() < 0:
+            self.x1 = self.x2 + self.image.get_width()
+        if self.x2 + self.image.get_width() < 0:
+            self.x2 = self.x1 + self.image.get_width()
+
+        screen.blit(self.image, (self.x1, 0))
+        screen.blit(self.image, (self.x2, 0))
+
 
 # Game Class to Handle Menu, Play, and Pause
 class Game:
@@ -251,7 +269,6 @@ class Game:
         screen.blit(return_text, (WIDTH // 2 - 200, HEIGHT // 2 + 50))
 
     def handle_play(self):
-        screen.blit(background_image, (0, 0))
         if random.randint(1, 50) == 1:
             lane = random.choice(lanes)
             key = lanes.index(lane)
@@ -351,6 +368,37 @@ game = Game()
 # Initialize Character BigCryer
 cryer = BigCryer()
 
+# Background layers
+background_layers = [
+    BackgroundLayer("Sprites/bg/fase1/Sky.png", 1),
+    BackgroundLayer("Sprites/bg/fase1/back.png", 2),
+    BackgroundLayer("Sprites/bg/fase1/houses3.png", 3),
+    BackgroundLayer("Sprites/bg/fase1/houses1.png", 4),
+    BackgroundLayer("Sprites/bg/fase1/minishop&callbox.png", 5),
+    BackgroundLayer("Sprites/bg/fase1/road&lamps.png", 6)
+]
+
+# Background layers
+#background_layers = [
+#    BackgroundLayer("Sprites/bg/fase2/1.png", 1),
+#    BackgroundLayer("Sprites/bg/fase2/2.png", 2),
+#    BackgroundLayer("Sprites/bg/fase2/3.png", 3),
+#    BackgroundLayer("Sprites/bg/fase2/4.png", 4),
+#    BackgroundLayer("Sprites/bg/fase2/5.png", 5),
+#    BackgroundLayer("Sprites/bg/fase2/7.png", 6),
+#    BackgroundLayer("Sprites/bg/fase2/road2.png", 7)
+#]
+
+#background_layers = [
+#    BackgroundLayer("Sprites/bg/fase3/Sky.png", 1),
+#    BackgroundLayer("Sprites/bg/fase3/houses.png", 2),
+#    BackgroundLayer("Sprites/bg/fase3/houses2.png", 3),
+#    BackgroundLayer("Sprites/bg/fase3/fountain&bush.png", 4),
+#    BackgroundLayer("Sprites/bg/fase3/houses1.png", 5),
+#    BackgroundLayer("Sprites/bg/fase3/umbrella&policebox.png", 6),
+#    BackgroundLayer("Sprites/bg/fase3/road.png", 7)
+#]
+
 # Game loop
 clock = pygame.time.Clock()
 running = True
@@ -373,6 +421,10 @@ while running:
         # Handle input in the game
         game.handle_input(event)
 
+    # Update the background layers
+    for layer in background_layers:
+        layer.update(screen)
+    
     # Update the game based on state
     game.update()
     if game.state == "playing":
