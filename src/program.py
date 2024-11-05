@@ -2,6 +2,7 @@ import pygame
 from pygame.locals import *
 import random
 import os
+import json
 
 # Initialize Pygame
 pygame.init()
@@ -10,6 +11,22 @@ pygame.init()
 WIDTH, HEIGHT = 1280, 720
 screen = pygame.display.set_mode((WIDTH, HEIGHT), HWSURFACE | DOUBLEBUF | RESIZABLE)
 pygame.display.set_caption("Chorão")
+
+# File to save high scores
+SCORE_FILE = "high_scores.json"
+
+# Load high scores from file
+def load_high_scores():
+    if os.path.exists(SCORE_FILE):
+        with open(SCORE_FILE, "r") as file:
+            return json.load(file)
+    else:
+        return {song: 0 for song in songs}
+
+# Save high scores to file
+def save_high_scores():
+    with open(SCORE_FILE, "w") as file:
+        json.dump(high_scores, file)
 
 # Colors
 WHITE = (255, 255, 255)
@@ -20,8 +37,15 @@ ORANGE = (255, 165, 0)
 GREY = (100, 100, 100)
 YELLOW = (255, 255, 0)  # Highlight color
 
+MUSIC_MAX_TIME = 30000  # For example, 30 seconds
+
+# Load custom font
+custom_font_path = "RockSalt-Regular.ttf"  
+font_large = pygame.font.Font(custom_font_path, 64)
+font_medium = pygame.font.Font(custom_font_path, 32)
+
 # Font
-font = pygame.font.SysFont(None, 48)
+font = pygame.font.Font(custom_font_path, 22)
 
 # Lanes and positions
 lanes = [150, 250, 350, 450]  # Corresponding to a, s, k, l
@@ -37,7 +61,7 @@ combo_streak = 0  # Tracks correct hits in a row
 
 # Music list and high scores dictionary
 songs = ["musica1.mp3", "musica2.mp3", "musica3.mp3"]
-high_scores = {song: 0 for song in songs}
+high_scores = load_high_scores()
 current_song = songs[0]
 
 # Function to find the next note in the lane
@@ -60,34 +84,35 @@ def draw_fixed_arrows():
         arrow_rect = arrows[i].get_rect(center=(lane + 25, HEIGHT - striking_zone_height + 25))
         screen.blit(arrows[i], arrow_rect)
 
-# Function to calculate the score and set dissipation color
+# Modify the score calculation logic
 def calculate_score(note, accuracy):
     global score, combo, combo_streak
 
+    # Adjust base score increments and decrements for fairness
     if accuracy == "early":
-        score_increase = -25
+        score_increase = -2  # Small penalty for early hits
         note.dissipate_color = WHITE
     elif accuracy == "good":
-        score_increase = 100
+        score_increase = 4  # Lower score for good hits
         note.dissipate_color = GREEN
     elif accuracy == "half":
-        score_increase = 50
+        score_increase = 2  # Lower score for half-good hits
         note.dissipate_color = ORANGE
     else:
-        score_increase = -25
+        score_increase = -3  # Higher penalty for a complete miss
         note.dissipate_color = RED
 
     if score_increase > 0:
+        # Positive combo for correct hits, capped at 5x multiplier
         combo_streak += 1
-        if combo_streak >= 3:
-            combo = 2 ** (combo_streak - 2)  # Exponential combo multiplier
-        else:
-            combo = 1
+        combo = min(combo_streak, 5)  # Cap the positive combo at 5
     else:
-        combo_streak = 0  # Reset combo streak on miss or early click
-        combo = 1  # Reset combo multiplier
+        # Negative combo for misses; increases penalty with more misses
+        combo_streak = max(combo_streak - 1, -5)  # Cap the negative combo at -5
+        combo = combo_streak
 
-    score += score_increase * combo
+    # Update score based on combo
+    score += score_increase * abs(combo)  # Use absolute value of combo for consistency
 
 class Note:
     def __init__(self, lane, key):
@@ -207,7 +232,6 @@ class BackgroundLayer:
         screen.blit(self.image, (self.x1, 0))
         screen.blit(self.image, (self.x2, 0))
 
-
 # Game Class to Handle Menu, Play, and Pause
 class Game:
     def __init__(self):
@@ -216,6 +240,7 @@ class Game:
         self.paused = False
         self.selected_option = 0
         self.song_selected = 0
+        self.music_start_time = 0  # Track when the music started
 
     def start_game(self):
         global current_song
@@ -230,7 +255,35 @@ class Game:
         combo_streak = 0
         pygame.mixer.music.load(current_song)
         pygame.mixer.music.play(-1)
+        self.music_start_time = pygame.time.get_ticks()  # Record the start time of the music
 
+    def handle_menu(self):
+        screen.fill(BLACK)
+        
+        # Title
+        title_text = font_large.render("Skater Pro: Chorão", True, WHITE)
+        title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+        screen.blit(title_text, title_rect)
+        
+        # Menu Options
+        play_text_color = YELLOW if self.selected_option == 0 else WHITE
+        quit_text_color = YELLOW if self.selected_option == 1 else WHITE
+        play_text = font_medium.render("Play", True, play_text_color)
+        quit_text = font_medium.render("Quit", True, quit_text_color)
+        
+        # Center menu options
+        play_rect = play_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        quit_rect = quit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 60))
+        screen.blit(play_text, play_rect)
+        screen.blit(quit_text, quit_rect)
+        
+        # Song List
+        for i, song in enumerate(songs):
+            song_text_color = YELLOW if self.song_selected == i else GREY
+            song_text = font_medium.render(f"{song} (High Score: {high_scores[song]})", True, song_text_color)
+            song_rect = song_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 140 + (i * 50)))
+            screen.blit(song_text, song_rect)
+            
     def pause_game(self):
         self.paused = True
         pygame.mixer.music.pause()
@@ -243,24 +296,19 @@ class Game:
         self.state = "menu"
         pygame.mixer.music.stop()
 
-    def handle_menu(self):
+    def handle_game_over(self):
         screen.fill(BLACK)
-        title = font.render("Skater Pro: Chorão", True, WHITE)
-        play_text_color = YELLOW if self.selected_option == 0 else WHITE
-        quit_text_color = YELLOW if self.selected_option == 1 else WHITE
-        play_text = font.render("Play", True, play_text_color)
-        quit_text = font.render("Quit", True, quit_text_color)
+        game_over_text = font_large.render("Game Over", True, WHITE)
+        score_text = font_medium.render(f"Score: {score}", True, WHITE)
+        high_score_text = font_medium.render(f"High Score: {high_scores[current_song]}", True, WHITE)
+        return_text = font_medium.render("Press Enter to return to Menu", True, GREY)
         
-        # Display the songs and high scores
-        for i, song in enumerate(songs):
-            song_text_color = YELLOW if self.song_selected == i else WHITE
-            song_text = font.render(f"{song} (High Score: {high_scores[song]})", True, song_text_color)
-            screen.blit(song_text, (WIDTH // 2 - 200, HEIGHT // 2 + 100 + (i * 50)))
-
-        screen.blit(title, (WIDTH // 2 - 200, HEIGHT // 4))
-        screen.blit(play_text, (WIDTH // 2 - 50, HEIGHT // 2))
-        screen.blit(quit_text, (WIDTH // 2 - 50, HEIGHT // 2 + 50))
-
+        # Center the game over text
+        screen.blit(game_over_text, game_over_text.get_rect(center=(WIDTH // 2, HEIGHT // 4)))
+        screen.blit(score_text, score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
+        screen.blit(high_score_text, high_score_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50)))
+        screen.blit(return_text, return_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100)))
+        
     def handle_pause(self):
         screen.fill(BLACK)
         pause_text = font.render("Paused", True, WHITE)
@@ -271,6 +319,16 @@ class Game:
         screen.blit(return_text, (WIDTH // 2 - 200, HEIGHT // 2 + 50))
 
     def handle_play(self):
+        # Check if the music has reached the max time
+        elapsed_time = pygame.time.get_ticks() - self.music_start_time
+        if elapsed_time >= MUSIC_MAX_TIME:
+            pygame.mixer.music.stop()
+            if score > high_scores[current_song]:  # Update high score if beaten
+                high_scores[current_song] = score
+                save_high_scores()  # Save high scores to file
+            self.state = "game_over"  # Switch to game over state
+            
+        # Regular gameplay handling
         if random.randint(1, 50) == 1:
             lane = random.choice(lanes)
             key = lanes.index(lane)
@@ -299,8 +357,6 @@ class Game:
                 note.hit = True
                 calculate_score(note, accuracy="miss")
 
-        
-
     def update(self):
         if self.state == "menu":
             self.handle_menu()
@@ -309,11 +365,8 @@ class Game:
                 self.handle_play()
             else:
                 self.handle_pause()
-        
-        # Display high score for the current song
-        if self.state == "playing" and not self.paused:
-            high_score_label = font.render(f"High Score: {high_scores[current_song]}", True, WHITE)
-            screen.blit(high_score_label, (10, 110))
+        elif self.state == "game_over":
+            self.handle_game_over()
 
     def handle_input(self, event):
         if self.state == "menu":
@@ -325,16 +378,12 @@ class Game:
                         pygame.quit()
                         exit()
                 elif event.key == pygame.K_UP:
-                    # Move selection up (Play/Quit)
                     self.selected_option = (self.selected_option - 1) % 2
                 elif event.key == pygame.K_DOWN:
-                    # Move selection down (Play/Quit)
                     self.selected_option = (self.selected_option + 1) % 2
                 elif event.key == pygame.K_LEFT:
-                    # Move song selection left
                     self.song_selected = (self.song_selected - 1) % len(songs)
                 elif event.key == pygame.K_RIGHT:
-                    # Move song selection right
                     self.song_selected = (self.song_selected + 1) % len(songs)
 
         elif self.state == "playing":
@@ -344,8 +393,6 @@ class Game:
                         self.pause_game()
                     else:
                         self.resume_game()
-
-                # Handle back to menu logic
                 if self.paused and event.key == pygame.K_m:
                     if score > high_scores[current_song]:  # Save the high score if beaten
                         high_scores[current_song] = score
@@ -356,21 +403,15 @@ class Game:
                     for lane_index, lane_key in enumerate([pygame.K_LEFT, pygame.K_DOWN, pygame.K_UP, pygame.K_RIGHT]):
                         if event.key == lane_key:
                             current_note = find_next_note_in_lane(lane_index, self.notes)
-
-                            # Early hit logic: note is too far from the striking zone
                             if current_note and current_note.rect.y < striking_zone_y - 50 and not current_note.hit:
                                 current_note.hit = True
                                 calculate_score(current_note, accuracy="early")
-
-                            # Normal hit logic: note is in the striking zone
                             elif current_note and HEIGHT - striking_zone_height - 50 < current_note.rect.y < HEIGHT - striking_zone_height + 50 and not current_note.hit:
                                 current_note.hit = True
                                 calculate_score(current_note, accuracy="good")
-                                
-            # Save high score when the game ends
-            if event.type == pygame.QUIT or (self.paused and event.key == pygame.K_m):
-                if score > high_scores[current_song]:
-                    high_scores[current_song] = score  # Update the high score
+
+        elif self.state == "game_over" and event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
                 self.back_to_menu()
 
 # Initialize game instance

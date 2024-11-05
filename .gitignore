@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 
+src/high_scores.json
+
 # Distribution / packaging
 .Python
 build/
