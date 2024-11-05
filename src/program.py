@@ -277,12 +277,15 @@ class Game:
         quit_text = font_medium.render("Quit", True, quit_text_color)
         
         # Center menu options
-        play_rect = play_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-        quit_rect = quit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 60))
+        play_rect = play_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 60))
+        quit_rect = quit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         screen.blit(play_text, play_rect)
         screen.blit(quit_text, quit_rect)
         
         # Display song list
+        dica = small_font.render("side arrows to change song", True, GREY)
+        dica_rect = dica.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
+        screen.blit(dica, dica_rect)
         for i, song in enumerate(songs):
             song_text_color = YELLOW if self.song_selected == i else GREY
             song_text = font_medium.render(f"{song} (High Score: {high_scores[song]})", True, song_text_color)
@@ -290,7 +293,7 @@ class Game:
             screen.blit(song_text, song_rect)
 
         # Display difficulty selection
-        difficulty_text = font.render(f"Difficulty: {self.difficulty} (Press 1 Easy, 2 Medium, 3 Hard, 4 Extreme, 5 Cryer)", True, GREY)
+        difficulty_text = small_font.render(f"Difficulty: {self.difficulty} (Press 1 Easy, 2 Medium, 3 Hard, 4 Extreme, 5 Cryer)", True, GREY)
         difficulty_rect = difficulty_text.get_rect(center=(WIDTH // 2, HEIGHT - 50))
         screen.blit(difficulty_text, difficulty_rect)
             
@@ -413,7 +416,7 @@ class Game:
                     self.difficulty = 4
                     self.note_cooldown = self.base_note_cooldown // self.difficulty
                 elif event.key == pygame.K_5:
-                    self.difficulty = 5 * 10
+                    self.difficulty = 5
                     self.note_cooldown = self.base_note_cooldown // self.difficulty
 
 
@@ -503,6 +506,8 @@ while running:
                 cryer.set_animation("trick1")
             elif event.key == pygame.K_LEFT:
                 cryer.set_animation("trick1")
+            elif event.key == pygame.K_RETURN:
+                cryer.set_animation("start_walk")
 
         # Handle input in the game
         game.handle_input(event)
