@@ -46,6 +46,7 @@ font_medium = pygame.font.Font(custom_font_path, 32)
 
 # Font
 font = pygame.font.Font(custom_font_path, 22)
+small_font = pygame.font.Font(custom_font_path, 16)
 
 # Lanes and positions
 lanes = [150, 250, 350, 450]  # Corresponding to a, s, k, l
@@ -241,6 +242,10 @@ class Game:
         self.selected_option = 0
         self.song_selected = 0
         self.music_start_time = 0  # Track when the music started
+        self.difficulty = 1  # Default to "easy"
+        self.base_note_cooldown = 1000  # Base cooldown in milliseconds
+        self.note_cooldown = self.base_note_cooldown // self.difficulty  # Adjusted cooldown
+        self.last_note_spawn_time = 0  # Initialize last note spawn time
 
     def start_game(self):
         global current_song
@@ -277,12 +282,17 @@ class Game:
         screen.blit(play_text, play_rect)
         screen.blit(quit_text, quit_rect)
         
-        # Song List
+        # Display song list
         for i, song in enumerate(songs):
             song_text_color = YELLOW if self.song_selected == i else GREY
             song_text = font_medium.render(f"{song} (High Score: {high_scores[song]})", True, song_text_color)
             song_rect = song_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 140 + (i * 50)))
             screen.blit(song_text, song_rect)
+
+        # Display difficulty selection
+        difficulty_text = font.render(f"Difficulty: {self.difficulty} (Press 1 Easy, 2 Medium, 3 Hard, 4 Extreme, 5 Cryer)", True, GREY)
+        difficulty_rect = difficulty_text.get_rect(center=(WIDTH // 2, HEIGHT - 50))
+        screen.blit(difficulty_text, difficulty_rect)
             
     def pause_game(self):
         self.paused = True
@@ -327,13 +337,16 @@ class Game:
                 high_scores[current_song] = score
                 save_high_scores()  # Save high scores to file
             self.state = "game_over"  # Switch to game over state
-            
-        # Regular gameplay handling
-        if random.randint(1, 50) == 1:
+
+        # Check if enough time has passed to spawn a new note
+        current_time = pygame.time.get_ticks()
+        if current_time - self.last_note_spawn_time >= self.note_cooldown:
+            # Pick one random lane to spawn a note in
             lane = random.choice(lanes)
             key = lanes.index(lane)
             self.notes.append(Note(lane, key))
-        
+            self.last_note_spawn_time = current_time  # Update the last spawn time
+
         # Draw backgrounds
         for layer in self.background_layers:
             layer.update(screen)
@@ -385,6 +398,25 @@ class Game:
                     self.song_selected = (self.song_selected - 1) % len(songs)
                 elif event.key == pygame.K_RIGHT:
                     self.song_selected = (self.song_selected + 1) % len(songs)
+                    
+                # Difficulty selection
+                elif event.key == pygame.K_1:
+                    self.difficulty = 1
+                    self.note_cooldown = self.base_note_cooldown // self.difficulty
+                elif event.key == pygame.K_2:
+                    self.difficulty = 2
+                    self.note_cooldown = self.base_note_cooldown // self.difficulty
+                elif event.key == pygame.K_3:
+                    self.difficulty = 3
+                    self.note_cooldown = self.base_note_cooldown // self.difficulty
+                elif event.key == pygame.K_4:
+                    self.difficulty = 4
+                    self.note_cooldown = self.base_note_cooldown // self.difficulty
+                elif event.key == pygame.K_5:
+                    self.difficulty = 5 * 10
+                    self.note_cooldown = self.base_note_cooldown // self.difficulty
+
+
 
         elif self.state == "playing":
             if event.type == pygame.KEYDOWN:
