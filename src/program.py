@@ -220,6 +220,8 @@ class Game:
     def start_game(self):
         global current_song
         current_song = songs[self.song_selected]
+        current_phase = self.song_selected 
+        self.background_layers = background_selection(current_phase)
         self.state = "playing"
         self.notes.clear()
         global score, combo, combo_streak
@@ -273,10 +275,16 @@ class Game:
             lane = random.choice(lanes)
             key = lanes.index(lane)
             self.notes.append(Note(lane, key))
+        
+        # Draw backgrounds
+        for layer in self.background_layers:
+            layer.update(screen)
 
+        # Draw the striking zone
         for i, lane in enumerate(lanes):
             pygame.draw.line(screen, WHITE, (lane + 25, 0), (lane + 25, HEIGHT), 2)
 
+        # Draw the notes and handle dissipation
         for note in self.notes[:]:
             if note.dissipating:
                 if note.dissipate():
@@ -285,10 +293,13 @@ class Game:
                 note.fall()
             note.draw(screen)
 
+        # Check for notes that are missed
         for note in self.notes[:]:
             if note.rect.y > striking_zone_y + 50 and not note.hit:
                 note.hit = True
                 calculate_score(note, accuracy="miss")
+
+        
 
     def update(self):
         if self.state == "menu":
@@ -368,36 +379,38 @@ game = Game()
 # Initialize Character BigCryer
 cryer = BigCryer()
 
-# Background layers
-background_layers = [
-    BackgroundLayer("Sprites/bg/fase1/Sky.png", 1),
-    BackgroundLayer("Sprites/bg/fase1/back.png", 2),
-    BackgroundLayer("Sprites/bg/fase1/houses3.png", 3),
-    BackgroundLayer("Sprites/bg/fase1/houses1.png", 4),
-    BackgroundLayer("Sprites/bg/fase1/minishop&callbox.png", 5),
-    BackgroundLayer("Sprites/bg/fase1/road&lamps.png", 6)
-]
 
-# Background layers
-#background_layers = [
-#    BackgroundLayer("Sprites/bg/fase2/1.png", 1),
-#    BackgroundLayer("Sprites/bg/fase2/2.png", 2),
-#    BackgroundLayer("Sprites/bg/fase2/3.png", 3),
-#    BackgroundLayer("Sprites/bg/fase2/4.png", 4),
-#    BackgroundLayer("Sprites/bg/fase2/5.png", 5),
-#    BackgroundLayer("Sprites/bg/fase2/7.png", 6),
-#    BackgroundLayer("Sprites/bg/fase2/road2.png", 7)
-#]
-
-#background_layers = [
-#    BackgroundLayer("Sprites/bg/fase3/Sky.png", 1),
-#    BackgroundLayer("Sprites/bg/fase3/houses.png", 2),
-#    BackgroundLayer("Sprites/bg/fase3/houses2.png", 3),
-#    BackgroundLayer("Sprites/bg/fase3/fountain&bush.png", 4),
-#    BackgroundLayer("Sprites/bg/fase3/houses1.png", 5),
-#    BackgroundLayer("Sprites/bg/fase3/umbrella&policebox.png", 6),
-#    BackgroundLayer("Sprites/bg/fase3/road.png", 7)
-#]
+def background_selection(background_selected):
+    if background_selected == 0:
+        background_layers = [
+            BackgroundLayer("Sprites/bg/fase1/Sky.png", 1),
+            BackgroundLayer("Sprites/bg/fase1/back.png", 2),
+            BackgroundLayer("Sprites/bg/fase1/houses3.png", 3),
+            BackgroundLayer("Sprites/bg/fase1/houses1.png", 4),
+            BackgroundLayer("Sprites/bg/fase1/minishop&callbox.png", 5),
+            BackgroundLayer("Sprites/bg/fase1/road&lamps.png", 6)
+        ]
+    elif background_selected == 1:
+        background_layers = [
+            BackgroundLayer("Sprites/bg/fase2/1.png", 1),
+            BackgroundLayer("Sprites/bg/fase2/2.png", 2),
+            BackgroundLayer("Sprites/bg/fase2/3.png", 3),
+            BackgroundLayer("Sprites/bg/fase2/4.png", 4),
+            BackgroundLayer("Sprites/bg/fase2/5.png", 5),
+            BackgroundLayer("Sprites/bg/fase2/7.png", 6),
+            BackgroundLayer("Sprites/bg/fase2/road2.png", 7)
+        ]
+    elif background_selected == 2:
+        background_layers = [
+            BackgroundLayer("Sprites/bg/fase3/Sky.png", 1),
+            BackgroundLayer("Sprites/bg/fase3/houses.png", 2),
+            BackgroundLayer("Sprites/bg/fase3/houses2.png", 3),
+            BackgroundLayer("Sprites/bg/fase3/fountain&bush.png", 4),
+            BackgroundLayer("Sprites/bg/fase3/houses1.png", 5),
+            BackgroundLayer("Sprites/bg/fase3/umbrella&policebox.png", 6),
+            BackgroundLayer("Sprites/bg/fase3/road.png", 7)
+        ]
+    return background_layers
 
 # Game loop
 clock = pygame.time.Clock()
@@ -420,10 +433,7 @@ while running:
 
         # Handle input in the game
         game.handle_input(event)
-
-    # Update the background layers
-    for layer in background_layers:
-        layer.update(screen)
+    
     
     # Update the game based on state
     game.update()
