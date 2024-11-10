@@ -37,7 +37,7 @@ ORANGE = (255, 165, 0)
 GREY = (100, 100, 100)
 YELLOW = (255, 255, 0)  # Highlight color
 
-MUSIC_MAX_TIME = 30000  # For example, 30 seconds
+MUSIC_MAX_TIME = 180_000  # For example, 180 seconds
 
 # Load custom font
 custom_font_path = "RockSalt-Regular.ttf"  
