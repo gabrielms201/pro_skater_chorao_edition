@@ -34,7 +34,7 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 ORANGE = (255, 165, 0)
-GREY = (100, 100, 100)
+GREY = (100, 130, 120)
 YELLOW = (255, 255, 0)  # Highlight color
 
 MUSIC_MAX_TIME = 180_000  # For example, 180 seconds
@@ -247,11 +247,13 @@ class Game:
         self.note_cooldown = self.base_note_cooldown // self.difficulty  # Adjusted cooldown
         self.last_note_spawn_time = 0  # Initialize last note spawn time
 
+        self.menu_background = self.background_selection(-1)
+
     def start_game(self):
         global current_song
         current_song = songs[self.song_selected]
         current_phase = self.song_selected 
-        self.background_layers = background_selection(current_phase)
+        self.background_layers = self.background_selection(current_phase)
         self.state = "playing"
         self.notes.clear()
         global score, combo, combo_streak
@@ -264,6 +266,10 @@ class Game:
 
     def handle_menu(self):
         screen.fill(BLACK)
+
+        # Draw the background
+        for layer in self.menu_background:
+            layer.update(screen)
         
         # Title
         title_text = font_large.render("Skater Pro: Chorão", True, WHITE)
@@ -271,8 +277,8 @@ class Game:
         screen.blit(title_text, title_rect)
         
         # Menu Options
-        play_text_color = YELLOW if self.selected_option == 0 else WHITE
-        quit_text_color = YELLOW if self.selected_option == 1 else WHITE
+        play_text_color = RED if self.selected_option == 0 else WHITE
+        quit_text_color = RED if self.selected_option == 1 else WHITE
         play_text = font_medium.render("Play", True, play_text_color)
         quit_text = font_medium.render("Quit", True, quit_text_color)
         
@@ -287,7 +293,7 @@ class Game:
         dica_rect = dica.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
         screen.blit(dica, dica_rect)
         for i, song in enumerate(songs):
-            song_text_color = YELLOW if self.song_selected == i else GREY
+            song_text_color = RED if self.song_selected == i else GREY
             song_text = font_medium.render(f"{song} (High Score: {high_scores[song]})", True, song_text_color)
             song_rect = song_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 140 + (i * 50)))
             screen.blit(song_text, song_rect)
@@ -449,44 +455,53 @@ class Game:
             if event.key == pygame.K_RETURN:
                 self.back_to_menu()
 
+    def background_selection(self, background_selected):
+        if background_selected == 0:
+            background_layers = [
+                BackgroundLayer("Sprites/bg/fase1/Sky.png", 1),
+                BackgroundLayer("Sprites/bg/fase1/back.png", 2),
+                BackgroundLayer("Sprites/bg/fase1/houses3.png", 3),
+                BackgroundLayer("Sprites/bg/fase1/houses1.png", 4),
+                BackgroundLayer("Sprites/bg/fase1/minishop&callbox.png", 5),
+                BackgroundLayer("Sprites/bg/fase1/road&lamps.png", 6)
+            ]
+        elif background_selected == 1:
+            background_layers = [
+                BackgroundLayer("Sprites/bg/fase2/1.png", 1),
+                BackgroundLayer("Sprites/bg/fase2/2.png", 2),
+                BackgroundLayer("Sprites/bg/fase2/3.png", 3),
+                BackgroundLayer("Sprites/bg/fase2/4.png", 4),
+                BackgroundLayer("Sprites/bg/fase2/5.png", 5),
+                BackgroundLayer("Sprites/bg/fase2/7.png", 6),
+                BackgroundLayer("Sprites/bg/fase2/road2.png", 7)
+            ]
+        elif background_selected == 2:
+            background_layers = [
+                BackgroundLayer("Sprites/bg/fase3/Sky.png", 1),
+                BackgroundLayer("Sprites/bg/fase3/houses.png", 2),
+                BackgroundLayer("Sprites/bg/fase3/houses2.png", 3),
+                BackgroundLayer("Sprites/bg/fase3/fountain&bush.png", 4),
+                BackgroundLayer("Sprites/bg/fase3/houses1.png", 5),
+                BackgroundLayer("Sprites/bg/fase3/umbrella&policebox.png", 6),
+                BackgroundLayer("Sprites/bg/fase3/road.png", 7)
+            ]
+        elif background_selected == -1:
+            background_layers = [
+                BackgroundLayer("Sprites/bg/menu/Sky.png", 1),
+                BackgroundLayer("Sprites/bg/menu/buildings.png", 2),
+                BackgroundLayer("Sprites/bg/menu/wall2.png", 3),
+                BackgroundLayer("Sprites/bg/menu/wall1.png", 4),
+                BackgroundLayer("Sprites/bg/menu/boxes&container.png", 5),
+                BackgroundLayer("Sprites/bg/menu/wheels&hydrant.png", 6),
+                BackgroundLayer("Sprites/bg/menu/road&border.png", 7),
+            ]
+        return background_layers
+
 # Initialize game instance
 game = Game()
 
 # Initialize Character BigCryer
 cryer = BigCryer()
-
-
-def background_selection(background_selected):
-    if background_selected == 0:
-        background_layers = [
-            BackgroundLayer("Sprites/bg/fase1/Sky.png", 1),
-            BackgroundLayer("Sprites/bg/fase1/back.png", 2),
-            BackgroundLayer("Sprites/bg/fase1/houses3.png", 3),
-            BackgroundLayer("Sprites/bg/fase1/houses1.png", 4),
-            BackgroundLayer("Sprites/bg/fase1/minishop&callbox.png", 5),
-            BackgroundLayer("Sprites/bg/fase1/road&lamps.png", 6)
-        ]
-    elif background_selected == 1:
-        background_layers = [
-            BackgroundLayer("Sprites/bg/fase2/1.png", 1),
-            BackgroundLayer("Sprites/bg/fase2/2.png", 2),
-            BackgroundLayer("Sprites/bg/fase2/3.png", 3),
-            BackgroundLayer("Sprites/bg/fase2/4.png", 4),
-            BackgroundLayer("Sprites/bg/fase2/5.png", 5),
-            BackgroundLayer("Sprites/bg/fase2/7.png", 6),
-            BackgroundLayer("Sprites/bg/fase2/road2.png", 7)
-        ]
-    elif background_selected == 2:
-        background_layers = [
-            BackgroundLayer("Sprites/bg/fase3/Sky.png", 1),
-            BackgroundLayer("Sprites/bg/fase3/houses.png", 2),
-            BackgroundLayer("Sprites/bg/fase3/houses2.png", 3),
-            BackgroundLayer("Sprites/bg/fase3/fountain&bush.png", 4),
-            BackgroundLayer("Sprites/bg/fase3/houses1.png", 5),
-            BackgroundLayer("Sprites/bg/fase3/umbrella&policebox.png", 6),
-            BackgroundLayer("Sprites/bg/fase3/road.png", 7)
-        ]
-    return background_layers
 
 # Game loop
 clock = pygame.time.Clock()
