@@ -109,7 +109,7 @@ def calculate_score(note, accuracy):
         combo = min(combo_streak, 5)  # Cap the positive combo at 5
     else:
         # Negative combo for misses; increases penalty with more misses
-        combo_streak = max(combo_streak - 1, -5)  # Cap the negative combo at -5
+        combo_streak = 1
         combo = combo_streak
 
     # Update score based on combo
@@ -177,7 +177,9 @@ class BigCryer:
             "jump": self.load_animation("Sprites/cryer/Pulando.png", 616, 192, 11),
             "crouch": self.load_animation("Sprites/cryer/Abaixa.png", 616, 192, 6),
             "trick1": self.load_animation("Sprites/cryer/Manobra_baixo.png", 616, 192, 8),
+            "trick2": self.load_animation("Sprites/cryer/Manobra_baixo.png", 616, 192, 8),
         }
+        self.animations["trick2"] = [pygame.transform.flip(frame, True, False) for frame in self.animations["trick1"]]
         self.current_animation = "start_walk"
         self.current_frame = 0
         self.frame_counter = 0
@@ -305,10 +307,16 @@ class Game:
             
     def pause_game(self):
         self.paused = True
+        for bg_layer in self.background_layers:
+            bg_layer.speed = 0
         pygame.mixer.music.pause()
 
     def resume_game(self):
         self.paused = False
+        speed = 1
+        for bg_layer in self.background_layers:
+            bg_layer.speed = speed
+            speed += 1
         pygame.mixer.music.unpause()
 
     def back_to_menu(self):
@@ -329,13 +337,14 @@ class Game:
         screen.blit(return_text, return_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100)))
         
     def handle_pause(self):
-        screen.fill(BLACK)
-        pause_text = font.render("Paused", True, WHITE)
-        resume_text = font.render("Press ESC to Resume", True, WHITE)
-        return_text = font.render("Press M to Return to Menu", True, WHITE)
-        screen.blit(pause_text, (WIDTH // 2 - 100, HEIGHT // 4))
-        screen.blit(resume_text, (WIDTH // 2 - 200, HEIGHT // 2))
-        screen.blit(return_text, (WIDTH // 2 - 200, HEIGHT // 2 + 50))
+        for layer in self.background_layers:
+            layer.update(screen)
+        text_color = WHITE
+        outline_color = BLACK
+        draw_text_with_outline("Paused", font, text_color, outline_color, WIDTH // 2 - 20, HEIGHT // 4 - 50)
+        draw_text_with_outline("Press ESC to Resume", font, text_color, outline_color, WIDTH // 2 - 100, HEIGHT // 2 - 50)
+        draw_text_with_outline("Press M to Return to Menu", font, text_color, outline_color, WIDTH // 2 - 150, HEIGHT // 2)
+        
 
     def handle_play(self):
         # Check if the music has reached the max time
@@ -437,6 +446,7 @@ class Game:
                 if self.paused and event.key == pygame.K_m:
                     if score > high_scores[current_song]:  # Save the high score if beaten
                         high_scores[current_song] = score
+                    self.paused = False
                     self.back_to_menu()
 
                 # Process key presses when they occur during gameplay
@@ -497,6 +507,16 @@ class Game:
             ]
         return background_layers
 
+def draw_text_with_outline(text, font, color, outline_color, x, y):
+    # Renderize o contorno ao redor do texto principal
+    outline_text = font.render(text, True, outline_color)
+    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]:
+        screen.blit(outline_text, (x + dx, y + dy))
+
+     # Renderize o texto principal no centro
+    main_text = font.render(text, True, color)
+    screen.blit(main_text, (x, y))
+
 # Initialize game instance
 game = Game()
 
@@ -520,7 +540,7 @@ while running:
             elif event.key == pygame.K_RIGHT:
                 cryer.set_animation("trick1")
             elif event.key == pygame.K_LEFT:
-                cryer.set_animation("trick1")
+                cryer.set_animation("trick2")
             elif event.key == pygame.K_RETURN:
                 cryer.set_animation("start_walk")
 
