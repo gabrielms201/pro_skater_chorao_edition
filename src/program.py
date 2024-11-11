@@ -508,12 +508,10 @@ class Game:
         return background_layers
 
 def draw_text_with_outline(text, font, color, outline_color, x, y):
-    # Renderize o contorno ao redor do texto principal
     outline_text = font.render(text, True, outline_color)
     for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]:
         screen.blit(outline_text, (x + dx, y + dy))
 
-     # Renderize o texto principal no centro
     main_text = font.render(text, True, color)
     screen.blit(main_text, (x, y))
 
